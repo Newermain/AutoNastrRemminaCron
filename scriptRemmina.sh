@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Функция для генерации имени файла профиля
+generate_profile_name() {
+    echo "$HOME/.local/share/remmina/connection_$(date +%s%N).remmina"
+}
+
 # Функция для установки Remmina и Cron
 install_remmina_and_cron() {
     echo "Установка Remmina и настройка Cron..."
@@ -24,7 +29,7 @@ create_remmina_profile() {
     echo
 
     mkdir -p ~/.local/share/remmina
-    profile_file="$HOME/.local/share/remmina/$(uuidgen).remmina"
+    profile_file=$(generate_profile_name)
 
     cat > "$profile_file" <<EOL
 [remmina]
@@ -51,12 +56,11 @@ add_to_autostart() {
     cat > "$startup_script" <<'EOL'
 #!/bin/bash
 
-# Ждём полной загрузки системы (включая графическую среду)
+# Ждём полной загрузки системы
 while [ -z "$(pgrep xfce4-session  pgrep gnome-session  pgrep plasma-desktop)" ]; do
     sleep 2
 done
 
-# Дополнительная задержка для надёжности
 sleep 5
 
 # Проверяем доступность сети
@@ -64,11 +68,10 @@ while ! ping -c1 8.8.8.8 &>/dev/null; do
     sleep 1
 done
 
-# Ищем последний профиль
+# Ищем последний профиль (сортируем по времени изменения)
 latest_profile=$(ls -t "$HOME"/.local/share/remmina/*.remmina 2>/dev/null | head -1)
 
 if [ -f "$latest_profile" ]; then
-    # Экспортируем необходимые переменные окружения
     export DISPLAY=:0
     export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
     remmina -c "$latest_profile" &
@@ -82,9 +85,9 @@ EOL
     # Добавляем в автозагрузку через crontab
     (crontab -l 2>/dev/null; echo "@reboot $startup_script") | crontab -
     
-    # Альтернативно: добавляем в автозапуск графической среды
-    if [ -d ~/.config/autostart ]; then
-        cat > ~/.config/autostart/remmina.desktop <<EOL
+    # Добавляем в автозапуск графической среды
+    mkdir -p ~/.config/autostart
+    cat > ~/.config/autostart/remmina.desktop <<EOL
 [Desktop Entry]
 Type=Application
 Exec=$startup_script
@@ -93,9 +96,8 @@ NoDisplay=false
 X-GNOME-Autostart-enabled=true
 Name=Remmina Autostart
 EOL
-    fi
 
-    echo "Автозагрузка настроена двумя способами: через crontab и графическую среду"
+    echo "Автозагрузка настроена через crontab и графическую среду"
 }
 
 # Основное меню
