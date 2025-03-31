@@ -54,17 +54,10 @@ add_to_autostart() {
     startup_script="$HOME/remmina_autostart.sh"
 
     cat > "$startup_script" <<'EOL'
-#!/bin/bash
-# Ozhidaem zagruzku system
-sleep 5
-
-#Proverka zapushena li remmina
-if ! pgrep -x "remmina" > /dev/null
-then
-	#Zapusk remmina
-	remmina &
+PROFILE=$(ls -t ~/.local/share/remmina/*.remmina 2>/dev/null | head -1)
+if [ -f "$PROFILE" ]; then
+    /usr/bin/remmina -c "$PROFILE" &
 fi
-
 exit 0
 EOL
 
