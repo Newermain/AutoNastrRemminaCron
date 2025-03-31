@@ -55,50 +55,28 @@ add_to_autostart() {
 
     cat > "$startup_script" <<'EOL'
 #!/bin/bash
-
-# Ждём полной загрузки системы
-while [ -z "$(pgrep xfce4-session  pgrep gnome-session  pgrep plasma-desktop)" ]; do
-    sleep 2
-done
-
+# Ozhidaem zagruzku system
 sleep 5
 
-# Проверяем доступность сети
-while ! ping -c1 8.8.8.8 &>/dev/null; do
-    sleep 1
-done
-
-# Ищем последний профиль (сортируем по времени изменения)
-latest_profile=$(ls -t "$HOME"/.local/share/remmina/*.remmina 2>/dev/null | head -1)
-
-if [ -f "$latest_profile" ]; then
-    export DISPLAY=:0
-    export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
-    remmina -c "$latest_profile" &
-else
-    remmina &
+#Proverka zapushena li remmina
+if ! pgrep -x "remmina" > /dev/null
+then
+	#Zapusk remmina
+	remmina &
 fi
+
+exit 0
 EOL
 
     chmod +x "$startup_script"
 
     # Добавляем в автозагрузку через crontab
-    (crontab -l 2>/dev/null; echo "@reboot $startup_script") | crontab -
+    (crontab -l 2>/dev/null; echo "@reboot sleep 5 && export DISPLAY=:0 && bash $startup_script") | crontab -
     
-    # Добавляем в автозапуск графической среды
-    mkdir -p ~/.config/autostart
-    cat > ~/.config/autostart/remmina.desktop <<EOL
-[Desktop Entry]
-Type=Application
-Exec=$startup_script
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-Name=Remmina Autostart
-EOL
 
-    echo "Автозагрузка настроена через crontab и графическую среду"
+    echo "Автозагрузка настроена через crontab"
 }
+
 
 # Основное меню
 while true; do
